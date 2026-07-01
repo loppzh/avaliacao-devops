@@ -1,0 +1,129 @@
+---
+# 1. Banco de Dados (PostgreSQL)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credcode-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credcode-db
+  template:
+    metadata:
+      labels:
+        app: credcode-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "credcode_user"
+        - name: POSTGRES_PASSWORD
+          value: "credcode_pass"
+        - name: POSTGRES_DB
+          value: "credcode_db"
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credcode-db-svc
+spec:
+  selector:
+    app: credcode-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+---
+# 2. Backend (Django)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credcode-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credcode-backend
+  template:
+    metadata:
+      labels:
+        app: credcode-backend
+    spec:
+      containers:
+      - name: backend
+        image: loppzh/credcode-backend:latest
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credcode-backend-svc
+spec:
+  selector:
+    app: credcode-backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+
+---
+# 3. Frontend (Vue)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credcode-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credcode-frontend
+  template:
+    metadata:
+      labels:
+        app: credcode-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: loppzh/credcode-frontend:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credcode-frontend-svc
+spec:
+  selector:
+    app: credcode-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+# 4. Roteamento (Traefik) 
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: credcode-ingress
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api`)
+      kind: Rule
+      services:
+        - name: credcode-backend-svc
+          port: 8000
+    - match: PathPrefix(`/`)
+      kind: Rule
+      services:
+        - name: credcode-frontend-svc
+          port: 80
