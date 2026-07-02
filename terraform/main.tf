@@ -35,7 +35,7 @@ resource "aws_security_group" "k3s_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTP (Frontend CredCode)
+  # HTTP (Frontend)
   ingress {
     from_port   = 80
     to_port     = 80
@@ -78,13 +78,18 @@ resource "aws_security_group" "k3s_sg" {
 # Criando o Control Plane
 resource "aws_instance" "control_plane" {
   ami             = data.aws_ami.ubuntu.id
-  instance_type   = "t2.medium" # t2.medium é o recomendado para o Master rodar o K3s e o ArgoCD com folga
-  key_name        = "vockey"    # Chave padrão do Learner Lab
+  instance_type   = "t2.medium" 
+  key_name        = "vockey"    
   security_groups = [aws_security_group.k3s_sg.name]
 
   tags = {
-    Name = "CredCode-ControlPlane"
+    Name = "DevOps-ControlPlane"
     Role = "master"
+  }
+
+  # ADICIONE ESTE BLOCO AQUI:
+  lifecycle {
+    ignore_changes = [ami]
   }
 }
 
@@ -97,8 +102,13 @@ resource "aws_instance" "workers" {
   security_groups = [aws_security_group.k3s_sg.name]
 
   tags = {
-    Name = "CredCode-Worker-${count.index + 1}"
+    Name = "DevOps-Worker-${count.index + 1}"
     Role = "worker"
+  }
+
+  # ADICIONE ESTE BLOCO AQUI TAMBÉM:
+  lifecycle {
+    ignore_changes = [ami]
   }
 }
 
